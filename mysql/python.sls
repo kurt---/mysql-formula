@@ -4,3 +4,5 @@
 mysql_python:
   pkg.installed:
     - name: {{ mysql.python }}
+    - require:
+      - service: mysqld
