@@ -1,8 +1,13 @@
 mysql:
   server:
-    # root_password: False - to have root@localhost without password
+    # Use this account for database admin (defaults to root)
+    root_user: 'admin'
+    # root_password: '' - to have root@localhost without password
     root_password: 'somepass'
     user: mysql
+    # If you only manage the dbs and users and the server is on
+    # another host
+    host: 123.123.123.123
     # my.cnf sections changes 
     mysqld:
       # you can use either underscore or hyphen in param names
@@ -25,6 +30,10 @@ mysql:
       source: salt://mysql/files/foo.schema
     bar:
       load: False
+    baz:
+      load: True
+      source: salt://mysql/files/baz.schema.tmpl
+      template: jinja
 
   # Manage users
   # you can get pillar for existent server using scripts/import_users.py script
@@ -58,3 +67,9 @@ mysql:
     client: mysql-client
     service: mysql-service
     python: python-mysqldb
+
+  # Install MySQL headers
+  dev:
+    # Install dev package - defaults to False
+    install: False
+

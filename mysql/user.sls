@@ -1,6 +1,8 @@
 {% from "mysql/defaults.yaml" import rawmap with context %}
 {%- set mysql = salt['grains.filter_by'](rawmap, grain='os', merge=salt['pillar.get']('mysql:server:lookup')) %}
-{%- set mysql_root_pass = salt['pillar.get']('mysql:server:root_password', 'somepass') %}
+{%- set mysql_root_user = salt['pillar.get']('mysql:server:root_user', 'root') %}
+{%- set mysql_root_pass = salt['pillar.get']('mysql:server:root_password', salt['grains.get']('server_id')) %}
+{%- set mysql_host = salt['pillar.get']('mysql:server:host', 'localhost') %}
 
 {% set user_states = [] %}
 {% set user_hosts = [] %}
@@ -8,7 +10,7 @@
 include:
   - mysql.python
 
-{% for name, user in salt['pillar.get']('mysql:user', {}).items() %}
+{% for name, user in salt['pillar.get']('mysql:user', {}).iteritems() %}
 
 {% set user_host = salt['pillar.get']('mysql:user:%s:host'|format(name)) %}
 {% if user_host != '' %}
@@ -31,20 +33,20 @@ include:
   {%- else %}
     - allow_passwordless: True
   {%- endif %}
-    - connection_host: localhost
-    - connection_user: root
+    - connection_host: '{{ mysql_host }}'
+    - connection_user: '{{ mysql_root_user }}'
     {% if mysql_root_pass %}
     - connection_pass: '{{ mysql_root_pass }}'
     {% endif %}
     - connection_charset: utf8
 
-{% for db in user['databases'] %}
-{{ state_id ~ '_' ~ loop.index0 }}:
+{%- if 'grants' in user %}
+{{ state_id ~ '_grants' }}:
   mysql_grants.present:
-    - name: {{ name ~ '_' ~ db['database']  ~ '_' ~ db['table'] | default('all') }}
-    - grant: {{db['grants']|join(",")}}
-    - database: '{{ db['database'] }}.{{ db['table'] | default('*') }}'
-    - grant_option: {{ db['grant_option'] | default(False) }}
+    - name: {{ name }}
+    - grant: {{ user['grants']|join(",") }}
+    - database: '*.*'
+    - grant_option: {{ user['grant_option'] | default(False) }}
     - user: {{ name }}
     - host: '{{ host }}'
     - connection_host: localhost
@@ -54,8 +56,29 @@ include:
     {% endif %}
     - connection_charset: utf8
     - require:
-      - mysql_user: {{ name }}
+      - mysql_user: {{ state_id }}
+{% endif %}
+
+{%- if 'databases' in user %}
+{% for db in user['databases'] %}
+{{ state_id ~ '_' ~ loop.index0 }}:
+  mysql_grants.present:
+    - name: {{ name ~ '_' ~ db['database']  ~ '_' ~ db['table'] | default('all') }}
+    - grant: {{db['grants']|join(",")}}
+    - database: '{{ db['database'] }}.{{ db['table'] | default('*') }}'
+    - grant_option: {{ db['grant_option'] | default(False) }}
+    - user: {{ name }}
+    - host: '{{ host }}'
+    - connection_host: '{{ mysql_host }}'
+    - connection_user: '{{ mysql_root_user }}'
+    {% if mysql_root_pass -%}
+    - connection_pass: '{{ mysql_root_pass }}'
+    {% endif %}
+    - connection_charset: utf8
+    - require:
+      - mysql_user: {{ state_id }}
 {% endfor %}
+{% endif %}
 
 {% do user_states.append(state_id) %}
 {% endfor %}

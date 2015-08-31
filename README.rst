@@ -56,7 +56,7 @@ Ensure that the MySQL service is not running.
 Create and manage MySQL databases.
 
 ``mysql.python``
-------------------
+----------------
 
 Install mysql python bindings.
 
@@ -86,4 +86,13 @@ priority.
 Remove the database called ``test``, normally created as part of a default
 MySQL installation.  This state is **not** included as part of the meta-state
 above as this name may conflict with a real database.
+
+``mysql.dev``
+-------------
+
+Install the MySQL development libraries and header files.
+
+.. note::
+    Note that this state is not installed by the mysql meta-state unless you set
+    your pillar data accordingly. 
 
